@@ -67,6 +67,7 @@ HostelMate is a full-stack hostel management system designed to simplify day-to-
 
 ## 📂 Project Structure
 
+```
 HostelMate/
 │
 ├── frontend/
@@ -84,6 +85,7 @@ HostelMate/
 │   └── package.json
 │
 └── README.md
+```
 
 ---
 
