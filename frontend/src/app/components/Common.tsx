@@ -100,12 +100,14 @@ export const Modal = ({ title, children, onClose }: { title: string; children: R
   </div>
 );
 
-export const Field = ({ label, type = "text", placeholder }: { label: string; type?: string; placeholder?: string }) => (
+export const Field = ({ label, type = "text", placeholder, value, onChange }: { label: string; type?: string; placeholder?: string; value?: string; onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void }) => (
   <div className="flex flex-col gap-1.5">
     <label className="text-sm font-medium" style={{ color: "#9CA3AF" }}>{label}</label>
     <input
       type={type}
       placeholder={placeholder}
+      value={value}
+      onChange={onChange}
       className="w-full px-4 py-2.5 rounded-xl text-sm text-white placeholder-gray-600 outline-none focus:ring-1 transition-all"
       style={{
         background: "rgba(255,255,255,0.05)",

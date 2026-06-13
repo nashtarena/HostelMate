@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Home } from "lucide-react";
 import { Glass, Field } from "../components/Common";
 import { Role, Tab } from "../types";
+import { apiService } from "../services/api";
 
 type LoginPageProps = {
   onLogin: (role: Role) => void;
@@ -10,6 +11,76 @@ type LoginPageProps = {
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const [tab, setTab] = useState<Tab>("login");
   const [role, setRole] = useState<Role>("student");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Login form state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Register form state
+  const [regFullName, setRegFullName] = useState("");
+  const [regRollNumber, setRegRollNumber] = useState("");
+  const [regEmail, setRegEmail] = useState("");
+  const [regPassword, setRegPassword] = useState("");
+  const [regCourse, setRegCourse] = useState("");
+  const [regYear, setRegYear] = useState(1);
+  const [regPhone, setRegPhone] = useState("");
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await apiService.login({
+        email: loginEmail,
+        password: loginPassword,
+        role,
+      });
+
+      if (response.success && response.token) {
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("user", JSON.stringify(response.user));
+        onLogin(role);
+      } else {
+        setError(response.message || "Login failed");
+      }
+    } catch (err: any) {
+      setError(err.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await apiService.register({
+        fullName: regFullName,
+        rollNumber: regRollNumber,
+        email: regEmail,
+        password: regPassword,
+        course: regCourse,
+        year: regYear,
+        phone: regPhone,
+      });
+
+      if (response.success) {
+        setTab("login");
+        setError("");
+      } else {
+        setError(response.message || "Registration failed");
+      }
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen" style={{ fontFamily: "Inter, sans-serif" }}>
@@ -53,16 +124,22 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               ))}
             </div>
 
+            {error && (
+              <div className="text-xs text-center py-2" style={{ color: "#EF4444" }}>
+                {error}
+              </div>
+            )}
+
             {tab === "login" ? (
-              <div className="flex flex-col gap-4">
-                <Field label="Email" type="email" placeholder="natasha@hostel.edu" />
-                <Field label="Password" type="password" placeholder="••••••••" />
-                <button className="text-sm text-right -mt-2" style={{ color: "#00D4AA" }}>Forgot password?</button>
+              <form onSubmit={handleLogin} className="flex flex-col gap-4">
+                <Field label="Email" type="email" placeholder="natasha@hostel.edu" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
+                <Field label="Password" type="password" placeholder="••••••••" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} />
+                <button type="button" className="text-sm text-right -mt-2" style={{ color: "#00D4AA" }}>Forgot password?</button>
                 <div>
                   <p className="text-sm mb-2" style={{ color: "#6B7280" }}>Sign in as</p>
                   <div className="flex gap-2">
                     {(["student", "warden", "admin"] as Role[]).map(r => (
-                      <button key={r} onClick={() => setRole(r)}
+                      <button key={r} type="button" onClick={() => setRole(r)}
                         className="flex-1 py-2 rounded-xl text-xs font-semibold capitalize transition-all duration-200"
                         style={{
                           background: role === r ? "#00D4AA" : "rgba(255,255,255,0.05)",
@@ -74,35 +151,37 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     ))}
                   </div>
                 </div>
-                <button onClick={() => onLogin(role)}
+                <button type="submit" disabled={loading}
                   className="w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:opacity-90 mt-2"
-                  style={{ background: "#00D4AA", color: "#0A0F1E" }}>
-                  Sign In
+                  style={{ background: "#00D4AA", color: "#0A0F1E", opacity: loading ? 0.7 : 1 }}>
+                  {loading ? "Signing in..." : "Sign In"}
                 </button>
-              </div>
+              </form>
             ) : (
-              <div className="flex flex-col gap-3">
-                <Field label="Full Name" placeholder="Natasha Avery" />
-                <Field label="Roll Number" placeholder="CS2021045" />
-                <Field label="Email" type="email" placeholder="natasha@hostel.edu" />
-                <Field label="Password" type="password" placeholder="••••••••" />
-                <Field label="Course" placeholder="B.Tech Computer Science" />
+              <form onSubmit={handleRegister} className="flex flex-col gap-3">
+                <Field label="Full Name" placeholder="Natasha Avery" value={regFullName} onChange={(e) => setRegFullName(e.target.value)} />
+                <Field label="Roll Number" placeholder="CS2021045" value={regRollNumber} onChange={(e) => setRegRollNumber(e.target.value)} />
+                <Field label="Email" type="email" placeholder="natasha@hostel.edu" value={regEmail} onChange={(e) => setRegEmail(e.target.value)} />
+                <Field label="Password" type="password" placeholder="••••••••" value={regPassword} onChange={(e) => setRegPassword(e.target.value)} />
+                <Field label="Course" placeholder="B.Tech Computer Science" value={regCourse} onChange={(e) => setRegCourse(e.target.value)} />
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <label className="text-sm font-medium block mb-1.5" style={{ color: "#9CA3AF" }}>Year</label>
                     <select className="w-full px-3 py-2.5 rounded-xl text-sm text-white outline-none"
-                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      value={regYear}
+                      onChange={(e) => setRegYear(Number(e.target.value))}>
                       {[1, 2, 3, 4].map(y => <option key={y} value={y}>{y}st Year</option>)}
                     </select>
                   </div>
-                  <div className="flex-1"><Field label="Phone" type="tel" placeholder="+91 9876543210" /></div>
+                  <div className="flex-1"><Field label="Phone" type="tel" placeholder="+91 9876543210" value={regPhone} onChange={(e) => setRegPhone(e.target.value)} /></div>
                 </div>
-                <button onClick={() => { setTab("login"); }}
+                <button type="submit" disabled={loading}
                   className="w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:opacity-90 mt-1"
-                  style={{ background: "#00D4AA", color: "#0A0F1E" }}>
-                  Sign Up
+                  style={{ background: "#00D4AA", color: "#0A0F1E", opacity: loading ? 0.7 : 1 }}>
+                  {loading ? "Signing up..." : "Sign Up"}
                 </button>
-              </div>
+              </form>
             )}
           </div>
         </div>
