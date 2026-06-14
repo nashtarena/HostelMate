@@ -2,7 +2,7 @@ import React from "react";
 import {
   LayoutDashboard, BedDouble, AlertCircle, CalendarOff, CreditCard,
   UtensilsCrossed, Users, SplitSquareHorizontal, Bell, Heart,
-  Building2, BarChart2, UserCheck, Settings, LogOut, Home
+  Building2, BarChart2, UserCheck, Settings, LogOut, Home, GraduationCap, UsersRound
 } from "lucide-react";
 import { Screen, Role } from "../types";
 
@@ -22,6 +22,8 @@ const navItemsStudent = [
 const navItemsAdmin = [
   { id: "admin-dashboard", label: "Overview", icon: LayoutDashboard },
   { id: "admin-rooms", label: "Room Management", icon: Building2 },
+  { id: "admin-students", label: "Students", icon: GraduationCap },
+  { id: "admin-parents", label: "Parents", icon: UsersRound },
   { id: "complaints", label: "Complaints", icon: AlertCircle },
   { id: "leave", label: "Leave Approvals", icon: CalendarOff },
   { id: "fees", label: "Fee Management", icon: CreditCard },
@@ -34,6 +36,12 @@ export const Sidebar = ({ screen, onNavigate, role, onLogout }: {
   screen: Screen; onNavigate: (s: Screen) => void; role: Role; onLogout: () => void;
 }) => {
   const items = role === "student" ? navItemsStudent : navItemsAdmin;
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const displayName = storedUser.name ? storedUser.name.split(" ").slice(0, 2).join(" ") : role;
+  const initials = storedUser.name
+    ? storedUser.name.split(" ").map((w: string) => w[0]).join("").toUpperCase().slice(0, 2)
+    : role.slice(0, 2).toUpperCase();
+  const isAdmin = role === "warden" || role === "admin";
   return (
     <aside className="fixed left-0 top-0 h-full flex flex-col z-30"
       style={{ width: 240, background: "#111827", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
@@ -51,13 +59,13 @@ export const Sidebar = ({ screen, onNavigate, role, onLogout }: {
         style={{ borderColor: "rgba(255,255,255,0.06)" }}>
         <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
           style={{ background: "linear-gradient(135deg,#00D4AA,#6366F1)", color: "#fff" }}>
-          {role === "student" ? "NA" : "WR"}
+          {initials}
         </div>
         <div className="flex flex-col items-start">
-          <span className="text-sm font-semibold text-white">{role === "student" ? "Natasha A." : "Dr. Ramesh"}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full mt-0.5"
-            style={{ background: role === "student" ? "rgba(99,102,241,0.2)" : "rgba(0,212,170,0.2)", color: role === "student" ? "#818CF8" : "#00D4AA" }}>
-            {role === "student" ? "Student" : "Warden"}
+          <span className="text-sm font-semibold text-white">{displayName}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full mt-0.5 capitalize"
+            style={{ background: isAdmin ? "rgba(0,212,170,0.2)" : "rgba(99,102,241,0.2)", color: isAdmin ? "#00D4AA" : "#818CF8" }}>
+            {role}
           </span>
         </div>
       </button>

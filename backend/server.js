@@ -11,7 +11,7 @@ const app = express();
 connectDB();
 
 // ── Global middleware ─────────────────────────────────────────────────────────
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*", credentials: true }));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 

@@ -1,6 +1,7 @@
 import React from "react";
 import { Glass, Badge, Field } from "../components/Common";
 import { Edit2, Mail, Phone, Shield } from "lucide-react";
+import ChangePasswordPage from "./ChangePasswordPage";
 
 export default function ProfilePage() {
   return (
@@ -109,13 +110,7 @@ export default function ProfilePage() {
 
       <Glass className="p-5 max-w-md">
         <h3 className="font-bold text-white mb-4">Change Password</h3>
-        <div className="flex flex-col gap-4">
-          <Field label="Current Password" type="password" />
-          <Field label="New Password" type="password" />
-          <Field label="Confirm New Password" type="password" />
-          <button className="px-5 py-2.5 rounded-xl text-sm font-bold w-fit"
-            style={{ background: "#00D4AA", color: "#0A0F1E" }}>Update Password</button>
-        </div>
+        <ChangePasswordPage />
       </Glass>
     </div>
   );

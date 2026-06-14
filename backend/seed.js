@@ -33,6 +33,19 @@ const run = async () => {
     { name: "Divya Nair",       email: "divya@hostel.edu",    password: await hash("student123"), role: "student", rollNumber: "CS2022011", course: "B.Tech CSE", year: 2, profileInitials: "DN" },
   ]);
 
+  // Seed a parent for student1
+  const parent1 = await User.create({
+    name: "Robert Avery",
+    email: "parent@hostel.edu",
+    password: await hash("parent123"),
+    role: "parent",
+    phone: "+91 9123456789",
+    relation: "Father",
+    student: student1._id,
+    profileInitials: "RA",
+  });
+  await User.findByIdAndUpdate(student1._id, { parent: parent1._id });
+
   // ── Rooms ────────────────────────────────────────────────────────────────
   const room204 = await Room.create({
     number: "204", floor: 2, block: "B", type: "Double",
@@ -94,6 +107,7 @@ const run = async () => {
   console.log("\nLogin credentials:");
   console.log("  Warden  → warden@hostel.edu   / warden123");
   console.log("  Student → natasha@hostel.edu  / student123");
+  console.log("  Parent  → parent@hostel.edu   / parent123");
   await mongoose.disconnect();
 };
 

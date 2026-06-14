@@ -1,319 +1,208 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
-interface LoginRequest {
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export interface LoginRequest {
   email: string;
   password: string;
-  role: 'student' | 'warden' | 'admin';
 }
 
-interface RegisterRequest {
-  fullName: string;
-  rollNumber: string;
-  email: string;
-  password: string;
-  course: string;
-  year: number;
-  phone: string;
-}
-
-interface AuthResponse {
+export interface AuthResponse {
   success: boolean;
-  message: string;
+  message?: string;
   token?: string;
   user?: {
     id: string;
+    name: string;
     email: string;
     role: string;
-    fullName?: string;
+    mustChangePassword?: boolean;
   };
 }
 
-class ApiService {
-  private getBaseUrl(): string {
-    return API_BASE_URL;
-  }
+export interface StudentPayload {
+  name: string;
+  email: string;
+  rollNumber: string;
+  course?: string;
+  year?: number;
+  phone?: string;
+  address?: string;
+  dateOfBirth?: string;
+  emergencyContact?: string;
+  block?: string;
+  room?: string;
+}
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const url = `${this.getBaseUrl()}${endpoint}`;
-    const config: RequestInit = {
+export interface ParentPayload {
+  name: string;
+  email: string;
+  phone?: string;
+  relation?: string;
+  studentId: string;
+}
+
+// ── Service ───────────────────────────────────────────────────────────────────
+
+class ApiService {
+  private request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const token = localStorage.getItem('token');
+    const url = `${API_BASE_URL}${endpoint}`;
+    return fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
-    };
-
-    try {
-      const response = await fetch(url, config);
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Request failed');
-      }
-
-      return data;
-    } catch (error) {
-      throw error;
-    }
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Request failed');
+      return data as T;
+    });
   }
 
-  async login(credentials: LoginRequest): Promise<AuthResponse> {
+  // Auth
+  login(credentials: LoginRequest) {
     return this.request<AuthResponse>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
   }
 
-  async register(userData: RegisterRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/api/auth/register', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-  }
-
-  async logout(): Promise<{ success: boolean; message: string }> {
-    return this.request<{ success: boolean; message: string }>('/api/auth/logout', {
-      method: 'POST',
-    });
-  }
-
-  // Rooms
-  async getMyRoom() {
-    return this.request('/api/rooms/my');
-  }
-
-  async getAllRooms() {
-    return this.request('/api/rooms');
-  }
-
-  async getRoomById(id: string) {
-    return this.request(`/api/rooms/${id}`);
-  }
-
-  async createRoom(roomData: any) {
-    return this.request('/api/rooms', {
-      method: 'POST',
-      body: JSON.stringify(roomData),
-    });
-  }
-
-  async updateRoom(id: string, roomData: any) {
-    return this.request(`/api/rooms/${id}`, {
+  changePassword(currentPassword: string, newPassword: string) {
+    return this.request<{ success: boolean; message: string }>('/api/auth/change-password', {
       method: 'PATCH',
-      body: JSON.stringify(roomData),
+      body: JSON.stringify({ currentPassword, newPassword }),
     });
   }
 
-  async assignStudent(id: string, studentData: any) {
-    return this.request(`/api/rooms/${id}/assign`, {
-      method: 'PATCH',
-      body: JSON.stringify(studentData),
-    });
+  getMe() {
+    return this.request<{ success: boolean; user: any }>('/api/auth/me');
   }
 
-  // Complaints
-  async getComplaints() {
-    return this.request('/api/complaints');
-  }
+  // ── Admin: Students ───────────────────────────────────────────────────────
 
-  async createComplaint(complaintData: any) {
-    return this.request('/api/complaints', {
+  getStudents() { return this.request<any>('/api/admin/students'); }
+
+  createStudent(data: StudentPayload) {
+    return this.request<any>('/api/admin/students', {
       method: 'POST',
-      body: JSON.stringify(complaintData),
+      body: JSON.stringify(data),
     });
   }
 
-  async updateComplaintStatus(id: string, statusData: any) {
-    return this.request(`/api/complaints/${id}/status`, {
+  updateStudent(id: string, data: Partial<StudentPayload>) {
+    return this.request<any>(`/api/admin/students/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(statusData),
+      body: JSON.stringify(data),
     });
   }
 
-  async toggleComplaintVote(id: string) {
-    return this.request(`/api/complaints/${id}/vote`, {
+  deleteStudent(id: string) {
+    return this.request<any>(`/api/admin/students/${id}`, { method: 'DELETE' });
+  }
+
+  resetStudentPassword(id: string) {
+    return this.request<any>(`/api/admin/students/${id}/reset-password`, { method: 'POST' });
+  }
+
+  // ── Admin: Parents ────────────────────────────────────────────────────────
+
+  getParents() { return this.request<any>('/api/admin/parents'); }
+
+  createParent(data: ParentPayload) {
+    return this.request<any>('/api/admin/parents', {
       method: 'POST',
+      body: JSON.stringify(data),
     });
   }
 
-  // Leaves
-  async getLeaves() {
-    return this.request('/api/leaves');
-  }
-
-  async applyLeave(leaveData: any) {
-    return this.request('/api/leaves', {
-      method: 'POST',
-      body: JSON.stringify(leaveData),
-    });
-  }
-
-  async approveLeave(id: string) {
-    return this.request(`/api/leaves/${id}/approve`, {
+  updateParent(id: string, data: Partial<Omit<ParentPayload, 'studentId'>>) {
+    return this.request<any>(`/api/admin/parents/${id}`, {
       method: 'PATCH',
+      body: JSON.stringify(data),
     });
   }
 
-  async rejectLeave(id: string) {
-    return this.request(`/api/leaves/${id}/reject`, {
-      method: 'PATCH',
-    });
+  deleteParent(id: string) {
+    return this.request<any>(`/api/admin/parents/${id}`, { method: 'DELETE' });
   }
 
-  // Fees
-  async getMyFeeSummary() {
-    return this.request('/api/fees/summary');
+  resetParentPassword(id: string) {
+    return this.request<any>(`/api/admin/parents/${id}/reset-password`, { method: 'POST' });
   }
 
-  async getAdminFeeSummary() {
-    return this.request('/api/fees/summary/admin');
-  }
+  // ── Rooms ─────────────────────────────────────────────────────────────────
 
-  async getFees() {
-    return this.request('/api/fees');
-  }
+  getMyRoom() { return this.request<any>('/api/rooms/my'); }
+  getAllRooms() { return this.request<any>('/api/rooms'); }
+  getRoomById(id: string) { return this.request<any>(`/api/rooms/${id}`); }
+  createRoom(data: any) { return this.request<any>('/api/rooms', { method: 'POST', body: JSON.stringify(data) }); }
+  updateRoom(id: string, data: any) { return this.request<any>(`/api/rooms/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); }
+  assignStudent(id: string, data: any) { return this.request<any>(`/api/rooms/${id}/assign`, { method: 'PATCH', body: JSON.stringify(data) }); }
 
-  async createFee(feeData: any) {
-    return this.request('/api/fees', {
-      method: 'POST',
-      body: JSON.stringify(feeData),
-    });
-  }
+  // ── Complaints ────────────────────────────────────────────────────────────
 
-  async payFee(id: string) {
-    return this.request(`/api/fees/${id}/pay`, {
-      method: 'PATCH',
-    });
-  }
+  getComplaints() { return this.request<any>('/api/complaints'); }
+  createComplaint(data: any) { return this.request<any>('/api/complaints', { method: 'POST', body: JSON.stringify(data) }); }
+  updateComplaintStatus(id: string, data: any) { return this.request<any>(`/api/complaints/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }); }
+  toggleComplaintVote(id: string) { return this.request<any>(`/api/complaints/${id}/vote`, { method: 'POST' }); }
 
-  // Mess
-  async getWeekMenu() {
-    return this.request('/api/mess/menu/week');
-  }
+  // ── Leaves ────────────────────────────────────────────────────────────────
 
-  async getMenu() {
-    return this.request('/api/mess/menu');
-  }
+  getLeaves() { return this.request<any>('/api/leaves'); }
+  applyLeave(data: any) { return this.request<any>('/api/leaves', { method: 'POST', body: JSON.stringify(data) }); }
+  approveLeave(id: string) { return this.request<any>(`/api/leaves/${id}/approve`, { method: 'PATCH' }); }
+  rejectLeave(id: string) { return this.request<any>(`/api/leaves/${id}/reject`, { method: 'PATCH' }); }
 
-  async createMenu(menuData: any) {
-    return this.request('/api/mess/menu', {
-      method: 'POST',
-      body: JSON.stringify(menuData),
-    });
-  }
+  // ── Fees ──────────────────────────────────────────────────────────────────
 
-  async updateMenu(id: string, menuData: any) {
-    return this.request(`/api/mess/menu/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(menuData),
-    });
-  }
+  getMyFeeSummary() { return this.request<any>('/api/fees/summary'); }
+  getAdminFeeSummary() { return this.request<any>('/api/fees/summary/admin'); }
+  getFees() { return this.request<any>('/api/fees'); }
+  createFee(data: any) { return this.request<any>('/api/fees', { method: 'POST', body: JSON.stringify(data) }); }
+  payFee(id: string) { return this.request<any>(`/api/fees/${id}/pay`, { method: 'PATCH' }); }
 
-  async submitFeedback(feedbackData: any) {
-    return this.request('/api/mess/feedback', {
-      method: 'POST',
-      body: JSON.stringify(feedbackData),
-    });
-  }
+  // ── Mess ──────────────────────────────────────────────────────────────────
 
-  async getRatingTrends() {
-    return this.request('/api/mess/feedback/ratings');
-  }
+  getWeekMenu() { return this.request<any>('/api/mess/menu/week'); }
+  getMenu() { return this.request<any>('/api/mess/menu'); }
+  createMenu(data: any) { return this.request<any>('/api/mess/menu', { method: 'POST', body: JSON.stringify(data) }); }
+  updateMenu(id: string, data: any) { return this.request<any>(`/api/mess/menu/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); }
+  submitFeedback(data: any) { return this.request<any>('/api/mess/feedback', { method: 'POST', body: JSON.stringify(data) }); }
+  getRatingTrends() { return this.request<any>('/api/mess/feedback/ratings'); }
 
-  // Visitors
-  async getVisitors() {
-    return this.request('/api/visitors');
-  }
+  // ── Visitors ──────────────────────────────────────────────────────────────
 
-  async addVisitor(visitorData: any) {
-    return this.request('/api/visitors', {
-      method: 'POST',
-      body: JSON.stringify(visitorData),
-    });
-  }
+  getVisitors() { return this.request<any>('/api/visitors'); }
+  addVisitor(data: any) { return this.request<any>('/api/visitors', { method: 'POST', body: JSON.stringify(data) }); }
+  checkInVisitor(id: string) { return this.request<any>(`/api/visitors/${id}/checkin`, { method: 'PATCH' }); }
+  checkOutVisitor(id: string) { return this.request<any>(`/api/visitors/${id}/checkout`, { method: 'PATCH' }); }
 
-  async checkInVisitor(id: string) {
-    return this.request(`/api/visitors/${id}/checkin`, {
-      method: 'PATCH',
-    });
-  }
+  // ── Expenses ──────────────────────────────────────────────────────────────
 
-  async checkOutVisitor(id: string) {
-    return this.request(`/api/visitors/${id}/checkout`, {
-      method: 'PATCH',
-    });
-  }
+  getMyBalance() { return this.request<any>('/api/expenses/balance'); }
+  getExpenses() { return this.request<any>('/api/expenses'); }
+  createExpense(data: any) { return this.request<any>('/api/expenses', { method: 'POST', body: JSON.stringify(data) }); }
+  settleExpense(id: string) { return this.request<any>(`/api/expenses/${id}/settle`, { method: 'PATCH' }); }
 
-  // Expenses
-  async getMyBalance() {
-    return this.request('/api/expenses/balance');
-  }
+  // ── Notices ───────────────────────────────────────────────────────────────
 
-  async getExpenses() {
-    return this.request('/api/expenses');
-  }
+  getNotices() { return this.request<any>('/api/notices'); }
+  createNotice(data: any) { return this.request<any>('/api/notices', { method: 'POST', body: JSON.stringify(data) }); }
+  updateNotice(id: string, data: any) { return this.request<any>(`/api/notices/${id}`, { method: 'PATCH', body: JSON.stringify(data) }); }
+  deleteNotice(id: string) { return this.request<any>(`/api/notices/${id}`, { method: 'DELETE' }); }
 
-  async createExpense(expenseData: any) {
-    return this.request('/api/expenses', {
-      method: 'POST',
-      body: JSON.stringify(expenseData),
-    });
-  }
+  // ── Roommate ──────────────────────────────────────────────────────────────
 
-  async settleExpense(id: string) {
-    return this.request(`/api/expenses/${id}/settle`, {
-      method: 'PATCH',
-    });
-  }
+  getMyPreferences() { return this.request<any>('/api/roommate/preferences'); }
+  savePreferences(data: any) { return this.request<any>('/api/roommate/preferences', { method: 'PUT', body: JSON.stringify(data) }); }
+  getMatches() { return this.request<any>('/api/roommate/matches'); }
 
-  // Notices
-  async getNotices() {
-    return this.request('/api/notices');
-  }
+  // ── Admin: Stats ──────────────────────────────────────────────────────────
 
-  async createNotice(noticeData: any) {
-    return this.request('/api/notices', {
-      method: 'POST',
-      body: JSON.stringify(noticeData),
-    });
-  }
-
-  async updateNotice(id: string, noticeData: any) {
-    return this.request(`/api/notices/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(noticeData),
-    });
-  }
-
-  async deleteNotice(id: string) {
-    return this.request(`/api/notices/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  // Roommate
-  async getMyPreferences() {
-    return this.request('/api/roommate/preferences');
-  }
-
-  async savePreferences(prefsData: any) {
-    return this.request('/api/roommate/preferences', {
-      method: 'PUT',
-      body: JSON.stringify(prefsData),
-    });
-  }
-
-  async getMatches() {
-    return this.request('/api/roommate/matches');
-  }
-
-  // Admin
-  async getDashboardStats() {
-    return this.request('/api/admin/stats');
-  }
+  getDashboardStats() { return this.request<any>('/api/admin/stats'); }
 }
 
 export const apiService = new ApiService();
